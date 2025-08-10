@@ -12,10 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('medicine_categories', function (Blueprint $table) {
-            $table->id(); // Corresponds to med_cat_id in the diagram
+            $table->id();
             $table->foreignId('medicine_id')->constrained()->onDelete('cascade');
             $table->foreignId('category_id')->constrained()->onDelete('cascade');
-            $table->timestamps();
         });
     }
 

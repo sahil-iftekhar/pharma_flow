@@ -10,28 +10,24 @@ class CartItem extends Model
 {
     use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
+    public const CREATED_AT = null;
+    public const UPDATED_AT = null;
+    
     protected $fillable = [
         'cart_id',
         'medicine_id',
         'quantity',
     ];
 
-    /**
-     * Get the cart that the item belongs to.
-     */
+    protected $casts = [
+        'quantity' => 'integer',
+    ];
+
     public function cart(): BelongsTo
     {
         return $this->belongsTo(Cart::class);
     }
 
-    /**
-     * Get the medicine associated with the cart item.
-     */
     public function medicine(): BelongsTo
     {
         return $this->belongsTo(Medicine::class);

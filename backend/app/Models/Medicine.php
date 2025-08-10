@@ -11,11 +11,6 @@ class Medicine extends Model
 {
     use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'name',
         'description',
@@ -26,19 +21,22 @@ class Medicine extends Model
         'stock',
     ];
 
-    /**
-     * The categories that belong to the medicine.
-     */
+    protected $casts = [
+        'stock' => 'integer',
+    ];
+
     public function categories(): BelongsToMany
     {
         return $this->belongsToMany(Category::class, 'medicine_categories');
     }
 
-    /**
-     * Get the cart items for the medicine.
-     */
     public function cartItems(): HasMany
     {
         return $this->hasMany(CartItem::class);
+    }
+
+    public function orderItems(): HasMany
+    {
+        return $this->hasMany(OrderItem::class);
     }
 }
