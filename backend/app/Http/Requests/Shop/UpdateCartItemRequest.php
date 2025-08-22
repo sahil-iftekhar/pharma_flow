@@ -4,7 +4,6 @@ namespace App\Http\Requests\Shop;
 
 use App\Http\Requests\BaseRequest;
 
-
 class UpdateCartItemRequest extends BaseRequest
 {
     /**
@@ -23,7 +22,26 @@ class UpdateCartItemRequest extends BaseRequest
     public function rules(): array
     {
         return [
-            'quantity' => ['required', 'integer', 'min:1'],
+            'items' => ['required', 'array'],
+            'items.*.medicine_id' => ['required', 'exists:medicines,id'],
+            'items.*.quantity' => ['required', 'integer', 'min:1'],
+        ];
+    }
+    
+    /**
+     * Get the error messages for the defined validation rules.
+     */
+    public function messages(): array
+    {
+        return [
+            'items.required' => 'The items list is required.',
+            'items.array' => 'The items must be an array.',
+            'items.*.medicine_id.required' => 'Each cart item must have a medicine ID.',
+            'items.*.medicine_id.exists' => 'One or more medicine IDs do not exist.',
+            'items.*.quantity.required' => 'Each cart item must have a quantity.',
+            'items.*.quantity.integer' => 'The quantity must be an integer.',
+            'items.*.quantity.min' => 'The quantity must be at least 1.',
         ];
     }
 }
+

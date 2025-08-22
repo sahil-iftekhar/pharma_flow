@@ -53,4 +53,9 @@ class Pharmacist extends Model
     {
         return $this->hasMany(Slot::class);
     }
+
+    public function userWithUsername()
+    {
+        return $this->belongsTo(User::class)->select('id', 'username');
+    }
 }

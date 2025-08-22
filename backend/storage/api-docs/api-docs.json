@@ -35,12 +35,12 @@
                                     "email": {
                                         "type": "string",
                                         "format": "email",
-                                        "example": "john.doe@example.com"
+                                        "example": "sahil@example.com"
                                     },
                                     "password": {
                                         "type": "string",
                                         "format": "password",
-                                        "example": "secret123"
+                                        "example": "Laravel@123"
                                     }
                                 },
                                 "type": "object"
@@ -161,25 +161,54 @@
                 "tags": [
                     "Categories"
                 ],
-                "summary": "Get all categories",
-                "description": "Retrieves a list of all medicine categories.",
+                "summary": "Get a paginated list of all categories",
+                "description": "Retrieves a paginated list of all categories. Accessible by any authenticated user.",
                 "operationId": "getCategoriesList",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number for pagination",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of items per page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 10
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Successful operation",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/Category"
-                                    }
+                                    "$ref": "#/components/schemas/CategoryPagination"
                                 }
                             }
                         }
                     },
                     "401": {
                         "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -200,9 +229,10 @@
                     "Categories"
                 ],
                 "summary": "Create a new category",
-                "description": "Creates a new category. Requires admin privileges.",
+                "description": "Creates a new category. Requires super admin privileges.",
                 "operationId": "createCategory",
                 "requestBody": {
+                    "description": "Category creation data.",
                     "required": true,
                     "content": {
                         "application/json": {
@@ -213,7 +243,7 @@
                                 "properties": {
                                     "name": {
                                         "type": "string",
-                                        "example": "Antibiotics"
+                                        "example": "Painkillers"
                                     }
                                 },
                                 "type": "object"
@@ -227,7 +257,13 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/Category"
+                                    "properties": {
+                                        "success": {
+                                            "type": "string",
+                                            "example": "Category created successfully."
+                                        }
+                                    },
+                                    "type": "object"
                                 }
                             }
                         }
@@ -243,7 +279,7 @@
                         }
                     },
                     "403": {
-                        "description": "Forbidden: User lacks admin privileges.",
+                        "description": "Forbidden: You are not authorized to create a category.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -253,7 +289,33 @@
                         }
                     },
                     "422": {
-                        "description": "Validation Error",
+                        "description": "Validation Error: Invalid input for allowed fields.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "The given data was invalid."
+                                        },
+                                        "errors": {
+                                            "type": "object",
+                                            "additionalProperties": {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string",
+                                                    "example": "The name has already been taken."
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -275,14 +337,14 @@
                 "tags": [
                     "Categories"
                 ],
-                "summary": "Get category by ID",
-                "description": "Retrieves a specific category by its ID.",
+                "summary": "Get category details by ID",
+                "description": "Retrieves the details of a specific category by its ID. Accessible by any authenticated user.",
                 "operationId": "getCategoryById",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "ID of the category",
+                        "description": "ID of the category to retrieve",
                         "required": true,
                         "schema": {
                             "type": "integer"
@@ -292,68 +354,6 @@
                 "responses": {
                     "200": {
                         "description": "Successful operation",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Category"
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Category not found",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            },
-            "put": {
-                "tags": [
-                    "Categories"
-                ],
-                "summary": "Update a category",
-                "description": "Updates an existing category. Requires admin privileges.",
-                "operationId": "updateCategory",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "description": "ID of the category to update",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "name": {
-                                        "type": "string",
-                                        "example": "Analgesics"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Category updated successfully",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -372,18 +372,8 @@
                             }
                         }
                     },
-                    "403": {
-                        "description": "Forbidden: User lacks admin privileges.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    },
                     "404": {
-                        "description": "Category not found",
+                        "description": "Not Found: Category not found.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -392,8 +382,8 @@
                             }
                         }
                     },
-                    "422": {
-                        "description": "Validation Error",
+                    "500": {
+                        "description": "Internal Server Error",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -414,7 +404,7 @@
                     "Categories"
                 ],
                 "summary": "Delete a category",
-                "description": "Deletes a category by ID. Requires admin privileges.",
+                "description": "Deletes a category by its ID. Requires super admin privileges.",
                 "operationId": "deleteCategory",
                 "parameters": [
                     {
@@ -428,21 +418,8 @@
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "Category deleted successfully",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "string",
-                                            "example": "Category deleted successfully."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                    "204": {
+                        "description": "No Content: Category deleted successfully."
                     },
                     "401": {
                         "description": "Unauthenticated",
@@ -455,7 +432,7 @@
                         }
                     },
                     "403": {
-                        "description": "Forbidden: User lacks admin privileges.",
+                        "description": "Forbidden: You are not authorized to delete this category.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -465,7 +442,17 @@
                         }
                     },
                     "404": {
-                        "description": "Category not found",
+                        "description": "Not Found: Category not found.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -487,25 +474,76 @@
                 "tags": [
                     "Medicines"
                 ],
-                "summary": "Get all medicines",
-                "description": "Retrieves a list of all medicines with their categories.",
-                "operationId": "getMedicinesList",
+                "summary": "List all medicines with optional filters and sorting",
+                "operationId": "259bf0e983a3ea35aa2617ea9318609b",
+                "parameters": [
+                    {
+                        "name": "category_id",
+                        "in": "query",
+                        "description": "Filter medicines by category ID.",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number for pagination",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "name",
+                        "in": "query",
+                        "description": "Search medicines by name (partial match).",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "sort_by",
+                        "in": "query",
+                        "description": "Field to sort by.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "price"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "sort_order",
+                        "in": "query",
+                        "description": "Sort order.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "asc",
+                                "desc"
+                            ]
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Successful operation",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/Medicine"
-                                    }
+                                    "$ref": "#/components/schemas/MedicinePagination"
                                 }
                             }
                         }
                     },
-                    "401": {
-                        "description": "Unauthenticated",
+                    "500": {
+                        "description": "Server error",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -514,23 +552,71 @@
                             }
                         }
                     }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
+                }
             },
             "post": {
                 "tags": [
                     "Medicines"
                 ],
                 "summary": "Create a new medicine",
-                "description": "Creates a new medicine and links it to categories. Requires admin privileges.",
-                "operationId": "createMedicine",
+                "operationId": "315f14b8ae91feb8ef96cc5ad57a0c4a",
                 "requestBody": {
                     "required": true,
                     "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "price",
+                                    "dosage",
+                                    "brand",
+                                    "stock",
+                                    "category_ids[]"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Paracetamol"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Description of Paracetamol",
+                                        "nullable": true
+                                    },
+                                    "price": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": "10.99"
+                                    },
+                                    "dosage": {
+                                        "type": "string",
+                                        "example": "500mg"
+                                    },
+                                    "brand": {
+                                        "type": "string",
+                                        "example": "Pfizer"
+                                    },
+                                    "stock": {
+                                        "type": "integer",
+                                        "example": "10"
+                                    },
+                                    "image_url": {
+                                        "description": "Medicine image file",
+                                        "type": "string",
+                                        "format": "binary",
+                                        "nullable": true
+                                    },
+                                    "category_ids[]": {
+                                        "description": "Array of category IDs",
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        },
                         "application/json": {
                             "schema": {
                                 "required": [
@@ -548,13 +634,13 @@
                                     },
                                     "description": {
                                         "type": "string",
-                                        "example": "Fever and pain reducer.",
+                                        "example": "Description of Paracetamol",
                                         "nullable": true
                                     },
                                     "price": {
                                         "type": "number",
                                         "format": "float",
-                                        "example": 7.5
+                                        "example": "10.99"
                                     },
                                     "dosage": {
                                         "type": "string",
@@ -562,27 +648,23 @@
                                     },
                                     "brand": {
                                         "type": "string",
-                                        "example": "Panadol"
-                                    },
-                                    "image_url": {
-                                        "type": "string",
-                                        "format": "url",
-                                        "example": "http://example.com/paracetamol.jpg",
-                                        "nullable": true
+                                        "example": "Pfizer"
                                     },
                                     "stock": {
                                         "type": "integer",
-                                        "example": 200
+                                        "example": "10"
+                                    },
+                                    "image_url": {
+                                        "description": "URL of the medicine image",
+                                        "type": "string",
+                                        "nullable": true
                                     },
                                     "category_ids": {
+                                        "description": "Array of category IDs",
                                         "type": "array",
                                         "items": {
                                             "type": "integer"
-                                        },
-                                        "example": [
-                                            1,
-                                            2
-                                        ]
+                                        }
                                     }
                                 },
                                 "type": "object"
@@ -596,23 +678,19 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/Medicine"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthenticated",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
+                                    "properties": {
+                                        "success": {
+                                            "type": "string",
+                                            "example": "Medicine created successfully"
+                                        }
+                                    },
+                                    "type": "object"
                                 }
                             }
                         }
                     },
                     "403": {
-                        "description": "Forbidden: User lacks admin privileges.",
+                        "description": "Forbidden",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -622,7 +700,17 @@
                         }
                     },
                     "422": {
-                        "description": "Validation Error",
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -639,19 +727,18 @@
                 ]
             }
         },
-        "/api/medicines/{id}": {
+        "/api/medicines/{medicine}": {
             "get": {
                 "tags": [
                     "Medicines"
                 ],
-                "summary": "Get medicine by ID",
-                "description": "Retrieves a specific medicine by its ID with its categories.",
-                "operationId": "getMedicineById",
+                "summary": "Retrieve a single medicine with its categories",
+                "operationId": "aa5bbd914ac06814a19f2f632501ac8a",
                 "parameters": [
                     {
-                        "name": "id",
+                        "name": "medicine",
                         "in": "path",
-                        "description": "ID of the medicine",
+                        "description": "The ID of the medicine to retrieve.",
                         "required": true,
                         "schema": {
                             "type": "integer"
@@ -678,26 +765,31 @@
                                 }
                             }
                         }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
                     }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
+                }
             },
-            "put": {
+            "post": {
                 "tags": [
                     "Medicines"
                 ],
-                "summary": "Update a medicine",
-                "description": "Updates an existing medicine. Requires admin privileges.",
-                "operationId": "updateMedicine",
+                "summary": "Update an existing medicine",
+                "description": "Uses POST method with _method=PATCH for multipart/form-data support.",
+                "operationId": "70d9fd699ce5b27102851d95c29b8323",
                 "parameters": [
                     {
-                        "name": "id",
+                        "name": "medicine",
                         "in": "path",
-                        "description": "ID of the medicine to update",
+                        "description": "The ID of the medicine to update.",
                         "required": true,
                         "schema": {
                             "type": "integer"
@@ -707,27 +799,99 @@
                 "requestBody": {
                     "required": true,
                     "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "properties": {
+                                    "_method": {
+                                        "description": "Method override for multipart/form-data",
+                                        "type": "string",
+                                        "enum": [
+                                            "PATCH"
+                                        ]
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Napa"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Updated Description of Paracetamol",
+                                        "nullable": true
+                                    },
+                                    "price": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": "7.99"
+                                    },
+                                    "dosage": {
+                                        "type": "string",
+                                        "example": "70mg"
+                                    },
+                                    "brand": {
+                                        "type": "string",
+                                        "example": "Moderna"
+                                    },
+                                    "stock": {
+                                        "type": "integer",
+                                        "example": "10"
+                                    },
+                                    "image_url": {
+                                        "description": "New image file. Send a file to update, or null to remove.",
+                                        "type": "string",
+                                        "format": "binary",
+                                        "nullable": true
+                                    },
+                                    "category_ids[]": {
+                                        "description": "Array of category IDs",
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        },
                         "application/json": {
                             "schema": {
                                 "properties": {
                                     "name": {
                                         "type": "string",
-                                        "example": "New Aspirin"
+                                        "example": "Napa"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Updated Description of Paracetamol",
+                                        "nullable": true
                                     },
                                     "price": {
                                         "type": "number",
                                         "format": "float",
-                                        "example": 6.5
+                                        "example": "7.99"
+                                    },
+                                    "dosage": {
+                                        "type": "string",
+                                        "example": "70mg"
+                                    },
+                                    "brand": {
+                                        "type": "string",
+                                        "example": "Moderna"
+                                    },
+                                    "stock": {
+                                        "type": "integer",
+                                        "example": "10"
+                                    },
+                                    "image_url": {
+                                        "description": "URL of the medicine image. Set to null to remove.",
+                                        "type": "string",
+                                        "nullable": true
                                     },
                                     "category_ids": {
+                                        "description": "Array of category IDs",
                                         "type": "array",
                                         "items": {
                                             "type": "integer"
-                                        },
-                                        "example": [
-                                            1,
-                                            3
-                                        ]
+                                        }
                                     }
                                 },
                                 "type": "object"
@@ -741,23 +905,19 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/Medicine"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthenticated",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
+                                    "properties": {
+                                        "success": {
+                                            "type": "string",
+                                            "example": "Medicine updated successfully"
+                                        }
+                                    },
+                                    "type": "object"
                                 }
                             }
                         }
                     },
                     "403": {
-                        "description": "Forbidden: User lacks admin privileges.",
+                        "description": "Forbidden",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -777,7 +937,17 @@
                         }
                     },
                     "422": {
-                        "description": "Validation Error",
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -798,13 +968,12 @@
                     "Medicines"
                 ],
                 "summary": "Delete a medicine",
-                "description": "Deletes a medicine by ID. Requires admin privileges.",
-                "operationId": "deleteMedicine",
+                "operationId": "fcd4bc74d26f517cdec79c89ac7ee525",
                 "parameters": [
                     {
-                        "name": "id",
+                        "name": "medicine",
                         "in": "path",
-                        "description": "ID of the medicine to delete",
+                        "description": "The ID of the medicine to delete.",
                         "required": true,
                         "schema": {
                             "type": "integer"
@@ -812,34 +981,11 @@
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "Medicine deleted successfully",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "string",
-                                            "example": "Medicine deleted successfully."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthenticated",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
+                    "204": {
+                        "description": "Medicine deleted successfully. No content returned."
                     },
                     "403": {
-                        "description": "Forbidden: User lacks admin privileges.",
+                        "description": "Forbidden",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -857,39 +1003,9 @@
                                 }
                             }
                         }
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/api/cart": {
-            "get": {
-                "tags": [
-                    "Cart"
-                ],
-                "summary": "Get the authenticated user's cart items",
-                "description": "Retrieves all items in the authenticated user's shopping cart.",
-                "operationId": "getUserCart",
-                "responses": {
-                    "200": {
-                        "description": "Successful operation",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/CartItem"
-                                    }
-                                }
-                            }
-                        }
                     },
-                    "401": {
-                        "description": "Unauthenticated",
+                    "500": {
+                        "description": "Server error",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -906,19 +1022,247 @@
                 ]
             }
         },
-        "/api/cart/items/{id}": {
-            "put": {
+        "/api/consultations": {
+            "get": {
                 "tags": [
-                    "Cart"
+                    "Consultations"
                 ],
-                "summary": "Update a cart item's quantity",
-                "description": "Updates the quantity of a specific cart item. Only the owner of the cart can update an item.",
-                "operationId": "updateCartItem",
+                "summary": "Get all consultations for the authenticated user.",
+                "operationId": "4b4bc18bb0483207e0bb19996efd5ef7",
+                "responses": {
+                    "200": {
+                        "description": "A paginated list of consultations.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Consultation"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        },
+                                        "links": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "500": {
+                        "description": "Server error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Consultations"
+                ],
+                "summary": "Book a new consultation.",
+                "operationId": "2600ce350e897fd439e3ca0c73d3b591",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RegisterConsultationRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Consultation booked successfully.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "string",
+                                            "example": "Consultation booked successfully."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden. Admins cannot register consultations."
+                    },
+                    "409": {
+                        "description": "Conflict. The requested slot is already booked."
+                    },
+                    "422": {
+                        "description": "Validation errors."
+                    },
+                    "500": {
+                        "description": "Server error."
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/slots/{pharmacist}": {
+            "get": {
+                "tags": [
+                    "Consultations"
+                ],
+                "summary": "Get all available slots for a pharmacist.",
+                "operationId": "ec7a7c6763912d7774edec28b5fe715a",
+                "parameters": [
+                    {
+                        "name": "pharmacist",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "description": "Optional date to filter slots.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2025-10-27"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "A list of available slots.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Slot"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Pharmacist not found"
+                    },
+                    "500": {
+                        "description": "Server error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/consultations/{id}": {
+            "get": {
+                "tags": [
+                    "Consultations"
+                ],
+                "summary": "Get a specific consultation by ID.",
+                "operationId": "02b7268e3cf7346eb3daf1820e49619e",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "ID of the cart item to update",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "A single consultation object.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ConsultationResource"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Consultation not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Consultations"
+                ],
+                "summary": "Delete a consultation.",
+                "operationId": "61e772fb3ad33d2ee0067434793e7bcd",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Consultation deleted successfully."
+                    },
+                    "403": {
+                        "description": "Forbidden."
+                    },
+                    "404": {
+                        "description": "Consultation not found."
+                    },
+                    "500": {
+                        "description": "Server error."
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Consultations"
+                ],
+                "summary": "Update a consultation's status.",
+                "operationId": "7399fedce8af1ac0ed18898ec91689ed",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
                         "required": true,
                         "schema": {
                             "type": "integer"
@@ -930,27 +1274,120 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "quantity"
-                                ],
-                                "properties": {
-                                    "quantity": {
-                                        "type": "integer",
-                                        "example": 5
-                                    }
-                                },
-                                "type": "object"
+                                "$ref": "#/components/schemas/UpdateConsultationRequest"
                             }
                         }
                     }
                 },
                 "responses": {
                     "200": {
-                        "description": "Cart item updated successfully",
+                        "description": "Consultation updated successfully."
+                    },
+                    "403": {
+                        "description": "Forbidden."
+                    },
+                    "404": {
+                        "description": "Consultation not found."
+                    },
+                    "422": {
+                        "description": "Validation errors."
+                    },
+                    "500": {
+                        "description": "Server error."
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/notifications": {
+            "get": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Get authenticated user's notifications",
+                "description": "Retrieves a paginated list of all notifications for the authenticated user.",
+                "operationId": "getNotifications",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number for pagination",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/CartItem"
+                                    "$ref": "#/components/schemas/NotificationPagination"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/notifications/{notification}": {
+            "get": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Get a single notification",
+                "description": "Retrieves a single notification by its ID. Requires authentication and authorization to ensure the user can only view their own notifications.",
+                "operationId": "getNotificationById",
+                "parameters": [
+                    {
+                        "name": "notification",
+                        "in": "path",
+                        "description": "ID of the notification to retrieve",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Notification"
                                 }
                             }
                         }
@@ -966,7 +1403,7 @@
                         }
                     },
                     "403": {
-                        "description": "Forbidden: User is not authorized to update this item.",
+                        "description": "Forbidden: Not authorized to view this notification.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -976,7 +1413,7 @@
                         }
                     },
                     "404": {
-                        "description": "Cart item not found",
+                        "description": "Not Found: Notification not found.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -985,8 +1422,8 @@
                             }
                         }
                     },
-                    "422": {
-                        "description": "Validation Error",
+                    "500": {
+                        "description": "Internal Server Error",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1002,18 +1439,18 @@
                     }
                 ]
             },
-            "delete": {
+            "put": {
                 "tags": [
-                    "Cart"
+                    "Notifications"
                 ],
-                "summary": "Delete a cart item",
-                "description": "Deletes a specific cart item. Only the owner of the cart can delete the item.",
-                "operationId": "deleteCartItem",
+                "summary": "Mark a notification as read",
+                "description": "Marks a specific notification as read. The notification ID is provided in the URL.",
+                "operationId": "markNotificationAsRead",
                 "parameters": [
                     {
-                        "name": "id",
+                        "name": "notification",
                         "in": "path",
-                        "description": "ID of the cart item to delete",
+                        "description": "ID of the notification to mark as read",
                         "required": true,
                         "schema": {
                             "type": "integer"
@@ -1022,14 +1459,14 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Cart item deleted successfully",
+                        "description": "Successful operation",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
                                         "success": {
                                             "type": "string",
-                                            "example": "Cart item deleted successfully."
+                                            "example": "Notification marked as read"
                                         }
                                     },
                                     "type": "object"
@@ -1048,7 +1485,7 @@
                         }
                     },
                     "403": {
-                        "description": "Forbidden: User is not authorized to delete this item.",
+                        "description": "Forbidden: Not authorized to mark this notification as read.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1058,7 +1495,1501 @@
                         }
                     },
                     "404": {
-                        "description": "Cart item not found",
+                        "description": "Not Found: Notification not found.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Delete a notification",
+                "description": "Deletes a single notification by its ID. Requires authentication and authorization to ensure the user can only delete their own notifications.",
+                "operationId": "deleteNotification",
+                "parameters": [
+                    {
+                        "name": "notification",
+                        "in": "path",
+                        "description": "ID of the notification to delete",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successful operation. No content to return."
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: Not authorized to delete this notification.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found: Notification not found.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/notifications/available": {
+            "get": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Check for unread notifications",
+                "description": "Checks if the authenticated user has any unread notifications.",
+                "operationId": "isNotiAvailable",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "is_read": {
+                                            "description": "True if no unread notifications exist, false otherwise.",
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/cart-items/{user_id}": {
+            "get": {
+                "tags": [
+                    "Carts"
+                ],
+                "summary": "Get all cart items for a specific user",
+                "description": "Retrieves all cart items for a user by their ID. Requires the authenticated user to be the owner of the cart.",
+                "operationId": "getCartItemsByUserId",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "path",
+                        "description": "ID of the user whose cart items to retrieve",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CartItemList"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: You are not authorized to access this cart.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found: Cart not found.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/cart-items/{cart_id}": {
+            "put": {
+                "tags": [
+                    "Carts"
+                ],
+                "summary": "Update a user's cart items",
+                "description": "Replaces all existing cart items with a new list. This acts as a full cart replacement. Requires the authenticated user to be the cart owner.",
+                "operationId": "updateCartItems",
+                "parameters": [
+                    {
+                        "name": "cart_id",
+                        "in": "path",
+                        "description": "ID of the cart to update",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateCartItemRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cart updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "string",
+                                            "example": "Cart updated successfully."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: You are not authorized to update this cart.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error: Invalid input.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Carts"
+                ],
+                "summary": "Delete all items from a user's cart",
+                "description": "Removes all cart items from a specific cart by its ID. Requires the authenticated user to be the cart owner.",
+                "operationId": "deleteCartItems",
+                "parameters": [
+                    {
+                        "name": "cart_id",
+                        "in": "path",
+                        "description": "ID of the cart to clear",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Cart items deleted successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "string",
+                                            "example": "Successfully deleted 3 cart item(s)."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: You are not authorized to delete this cart.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found: Cart not found.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/deliveries": {
+            "get": {
+                "tags": [
+                    "Deliveries"
+                ],
+                "summary": "Get a paginated list of deliveries for the authenticated user or all for an admin",
+                "operationId": "f5557ec4cd5827f86e1c90ad27299942",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number for pagination",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/DeliveryWithOrderResponse"
+                                            }
+                                        },
+                                        "links": {
+                                            "type": "object"
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/deliveries/{delivery}": {
+            "get": {
+                "tags": [
+                    "Deliveries"
+                ],
+                "summary": "Get a specific delivery by ID",
+                "operationId": "39a44ff02b0d374cb8319e35b2f89508",
+                "parameters": [
+                    {
+                        "name": "delivery",
+                        "in": "path",
+                        "description": "ID of the delivery to retrieve",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeliveryWithOrderResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Delivery not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Deliveries"
+                ],
+                "summary": "Delete a delivery by ID (Super Admin only)",
+                "operationId": "d3ced32c5d02ce3b61e5b42d99c44da2",
+                "parameters": [
+                    {
+                        "name": "delivery",
+                        "in": "path",
+                        "description": "ID of the delivery to delete",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Delivery deleted successfully"
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Delivery not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/orders": {
+            "get": {
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Get a list of all orders for the current user or all orders for staff/admin",
+                "operationId": "a74d17c8a6f11cd4c219f370004ea189",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number for pagination",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderPagination"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Create a new order from the user's cart",
+                "operationId": "8da2918aaa60371aa3392e0c612e06bf",
+                "requestBody": {
+                    "description": "Order data, including optional prescriptions and subscribe type",
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "properties": {
+                                    "subscribe_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "none",
+                                            "weekly",
+                                            "monthly"
+                                        ],
+                                        "example": "none"
+                                    },
+                                    "delivery_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "basic",
+                                            "rapid",
+                                            "emergency"
+                                        ],
+                                        "example": "basic"
+                                    },
+                                    "prescription_images[]": {
+                                        "description": "Array of prescription image files",
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string",
+                                            "format": "binary"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        },
+                        "application/json": {
+                            "schema": {
+                                "description": "Order data without prescription images",
+                                "properties": {
+                                    "subscribe_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "none",
+                                            "weekly",
+                                            "monthly"
+                                        ],
+                                        "example": "none"
+                                    },
+                                    "delivery_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "basic",
+                                            "rapid",
+                                            "emergency"
+                                        ],
+                                        "example": "basic"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Order created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Order created successfully."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Cart not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/orders/{order}": {
+            "get": {
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Get details for a specific order",
+                "operationId": "c5b22a1794a167b0782816260db7a80e",
+                "parameters": [
+                    {
+                        "name": "order",
+                        "in": "path",
+                        "description": "ID of the order to retrieve",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "order": {
+                                            "$ref": "#/components/schemas/OrderWithItemsAndPrescriptions"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Order not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Delete a specific order (owner only)",
+                "operationId": "048fd735fcc759e62bc7a0815c80ff10",
+                "parameters": [
+                    {
+                        "name": "order",
+                        "in": "path",
+                        "description": "ID of the order to delete",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Order deleted successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Order not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Update the status of a specific order",
+                "operationId": "38d4660441b5281fbc14bf63794f40ed",
+                "parameters": [
+                    {
+                        "name": "order",
+                        "in": "path",
+                        "description": "ID of the order to update",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "order_status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "pending",
+                                            "delivered",
+                                            "canceled"
+                                        ],
+                                        "example": "delivered"
+                                    },
+                                    "subscribe_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "none",
+                                            "weekly",
+                                            "monthly"
+                                        ],
+                                        "example": "none"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Order updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Order not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/payments": {
+            "get": {
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "Get a list of payments, optionally filtered by order",
+                "description": "Retrieves a paginated list of all payments. SuperAdmins can see all payments, while other users can only see their own. An optional order_id query parameter can be used to filter payments.",
+                "operationId": "getPaymentsList",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number for pagination",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "order_id",
+                        "in": "query",
+                        "description": "Filter payments by a specific order ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaymentPagination"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "Create a new payment",
+                "description": "Creates a new payment for a specified order. The authenticated user must own the order.",
+                "operationId": "createPayment",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RegisterPaymentRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Payment created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "string",
+                                            "example": "Payment successful."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: Not authorized to create a payment for this order.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Order not found.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/payments/{payment}": {
+            "get": {
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "Get a single payment by ID",
+                "description": "Retrieves a specific payment record by its ID. Users can only access their own payments unless they are a SuperAdmin.",
+                "operationId": "getPaymentById",
+                "parameters": [
+                    {
+                        "name": "payment",
+                        "in": "path",
+                        "description": "ID of the payment to retrieve",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Payment"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: You are not authorized to view this payment.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Payment not found.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "Delete a payment",
+                "description": "Deletes a specific payment by its ID. Only SuperAdmins are authorized to perform this action.",
+                "operationId": "deletePayment",
+                "parameters": [
+                    {
+                        "name": "payment",
+                        "in": "path",
+                        "description": "ID of the payment to delete",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Payment deleted successfully. No content returned."
+                    },
+                    "403": {
+                        "description": "Forbidden: Not authorized to delete this payment.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Payment not found.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/pharmacists": {
+            "get": {
+                "tags": [
+                    "Pharmacists"
+                ],
+                "summary": "Get a paginated list of all pharmacists",
+                "operationId": "ac05fae663923e984d60fb15d40658c7",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/PharmacistWithUser"
+                                            }
+                                        },
+                                        "links": {
+                                            "type": "object"
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Pharmacists"
+                ],
+                "summary": "Register a new pharmacist account",
+                "operationId": "7e534c90e96d2ec77cadee655bfbf414",
+                "requestBody": {
+                    "description": "User and pharmacist data",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RegisterPharmacistRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Pharmacist created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "string",
+                                            "example": "Pharmacist profile created successfully."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/pharmacists/{user}": {
+            "get": {
+                "tags": [
+                    "Pharmacists"
+                ],
+                "summary": "Get a specific pharmacist by User ID",
+                "operationId": "50c59ab66d00e5ea389ddba0a69142ca",
+                "parameters": [
+                    {
+                        "name": "user",
+                        "in": "path",
+                        "description": "ID of the user associated with the pharmacist to retrieve",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PharmacistWithUser"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Pharmacist not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Pharmacists"
+                ],
+                "summary": "Update a pharmacist profile by User ID",
+                "operationId": "d96bd073ae8c027472122ebe1b68d1b4",
+                "parameters": [
+                    {
+                        "name": "user",
+                        "in": "path",
+                        "description": "ID of the user associated with the pharmacist to update",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "description": "Updated user and pharmacist data",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdatePharmacistRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Pharmacist updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "string",
+                                            "example": "Pharmacist profile updated successfully."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Pharmacist or User not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1157,8 +3088,8 @@
                 "tags": [
                     "Users"
                 ],
-                "summary": "Create a new company user",
-                "description": "Registers a new user with the 'company' role. Sensitive fields like 'is_admin' and 'is_active' \n     * cannot be set by the client for this endpoint.",
+                "summary": "Create a new user",
+                "description": "Registers a new user. Sensitive fields like 'is_admin' and 'is_active' \n     * cannot be set by the client for this endpoint.",
                 "operationId": "createUser",
                 "requestBody": {
                     "description": "User registration data. Can be JSON or Multipart Form Data.",
@@ -1306,7 +3237,7 @@
                     "Users"
                 ],
                 "summary": "Get user details by ID or slug",
-                "description": "Retrieves the details of a specific user by their ID or slug. A user can view their own profile, or an admin can view any user's profile. Includes portfolio links if the user is a 'provider'.",
+                "description": "Retrieves the details of a specific user by their ID or slug.",
                 "operationId": "getUserByIdOrSlug",
                 "parameters": [
                     {
@@ -1328,19 +3259,6 @@
                                     "allOf": [
                                         {
                                             "$ref": "#/components/schemas/User"
-                                        },
-                                        {
-                                            "properties": {
-                                                "portfolio_links": {
-                                                    "description": "List of portfolio links for 'provider' users.",
-                                                    "type": "array",
-                                                    "items": {
-                                                        "$ref": "#/components/schemas/PortfolioLink"
-                                                    },
-                                                    "nullable": true
-                                                }
-                                            },
-                                            "type": "object"
                                         }
                                     ]
                                 }
@@ -1615,324 +3533,36 @@
                     }
                 ]
             }
-        },
-        "/api/users/admin": {
-            "post": {
-                "tags": [
-                    "Users"
-                ],
-                "summary": "Create a new admin user",
-                "description": "Registers a new user with the 'admin' role and sets 'is_admin' to true. Requires super super admin privileges for the authenticated user. \n     * Sensitive fields like 'is_active' and 'role' ('admin') cannot be set by the client for this endpoint.",
-                "operationId": "createAdminUser",
-                "requestBody": {
-                    "description": "Admin user registration data. Can be JSON or Multipart Form Data.",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "email",
-                                    "username",
-                                    "password",
-                                    "password_confirmation",
-                                    "is_admin",
-                                    "role"
-                                ],
-                                "properties": {
-                                    "first_name": {
-                                        "type": "string",
-                                        "example": "Admin",
-                                        "nullable": true
-                                    },
-                                    "last_name": {
-                                        "type": "string",
-                                        "example": "User",
-                                        "nullable": true
-                                    },
-                                    "email": {
-                                        "type": "string",
-                                        "format": "email",
-                                        "example": "admin@example.com"
-                                    },
-                                    "username": {
-                                        "type": "string",
-                                        "example": "adminuser"
-                                    },
-                                    "password": {
-                                        "type": "string",
-                                        "format": "password",
-                                        "example": "AdminPass123!"
-                                    },
-                                    "password_confirmation": {
-                                        "type": "string",
-                                        "format": "password",
-                                        "example": "AdminPass123!"
-                                    },
-                                    "address": {
-                                        "type": "string",
-                                        "example": "100 Admin Rd",
-                                        "nullable": true
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "User created successfully",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "string",
-                                            "example": "Operation completed successfully."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthenticated",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden: Unauthorized key (e.g., is_active, incorrect role) provided, or authenticated user lacks privileges to create an an admin.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error: Invalid input for allowed fields.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "example": "The given data was invalid."
-                                        },
-                                        "errors": {
-                                            "type": "object",
-                                            "additionalProperties": {
-                                                "type": "array",
-                                                "items": {
-                                                    "type": "string",
-                                                    "example": "The field is required."
-                                                }
-                                            }
-                                        }
-                                    },
-                                    "type": "object"
-                                },
-                                "example": {
-                                    "message": "The given data was invalid.",
-                                    "errors": {
-                                        "email": [
-                                            "The email is already in use."
-                                        ],
-                                        "password": [
-                                            "The password confirmation does not match."
-                                        ]
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
         }
     },
     "components": {
         "schemas": {
-            "Category": {
-                "title": "Category",
-                "description": "Category model",
+            "ErrorResponse": {
+                "title": "Error Response",
+                "description": "Standard error response format for generic errors (e.g., 401, 403, 404, 500)",
                 "properties": {
-                    "id": {
-                        "description": "Category ID",
-                        "type": "integer",
-                        "format": "int64"
-                    },
-                    "name": {
-                        "description": "Category name",
+                    "errors": {
+                        "description": "Error message",
                         "type": "string"
-                    },
-                    "created_at": {
-                        "description": "Timestamp of creation",
-                        "type": "string",
-                        "format": "date-time"
-                    },
-                    "updated_at": {
-                        "description": "Timestamp of last update",
-                        "type": "string",
-                        "format": "date-time"
                     }
                 },
                 "type": "object",
                 "example": {
-                    "id": 1,
-                    "name": "Painkillers",
-                    "created_at": "2023-01-01T12:00:00.000000Z",
-                    "updated_at": "2023-01-01T12:00:00.000000Z"
+                    "errors": "Something went wrong."
                 }
             },
-            "Medicine": {
-                "title": "Medicine",
-                "description": "Medicine model",
+            "SuccessResponse": {
+                "title": "Success Response",
+                "description": "Standard success response format for updates and deletes",
                 "properties": {
-                    "id": {
-                        "description": "Medicine ID",
-                        "type": "integer",
-                        "format": "int64"
-                    },
-                    "name": {
-                        "description": "Name of the medicine",
+                    "success": {
+                        "description": "Success message",
                         "type": "string"
-                    },
-                    "description": {
-                        "description": "Description of the medicine",
-                        "type": "string",
-                        "nullable": true
-                    },
-                    "price": {
-                        "description": "Price of the medicine",
-                        "type": "number",
-                        "format": "float"
-                    },
-                    "dosage": {
-                        "description": "Dosage information",
-                        "type": "string"
-                    },
-                    "brand": {
-                        "description": "Brand of the medicine",
-                        "type": "string"
-                    },
-                    "image_url": {
-                        "description": "URL of the medicine's image",
-                        "type": "string",
-                        "format": "url",
-                        "nullable": true
-                    },
-                    "stock": {
-                        "description": "Current stock quantity",
-                        "type": "integer"
-                    },
-                    "categories": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/Category"
-                        }
-                    },
-                    "created_at": {
-                        "description": "Timestamp of creation",
-                        "type": "string",
-                        "format": "date-time"
-                    },
-                    "updated_at": {
-                        "description": "Timestamp of last update",
-                        "type": "string",
-                        "format": "date-time"
                     }
                 },
                 "type": "object",
                 "example": {
-                    "id": 1,
-                    "name": "Aspirin",
-                    "description": "Pain relief medicine",
-                    "price": 5.99,
-                    "dosage": "500mg",
-                    "brand": "Bayer",
-                    "image_url": "http://example.com/aspirin.jpg",
-                    "stock": 100,
-                    "categories": [
-                        {
-                            "id": 1,
-                            "name": "Painkillers"
-                        }
-                    ],
-                    "created_at": "2023-01-01T12:00:00.000000Z",
-                    "updated_at": "2023-01-01T12:00:00.000000Z"
-                }
-            },
-            "CartItem": {
-                "title": "CartItem",
-                "description": "Cart Item model",
-                "properties": {
-                    "id": {
-                        "description": "Cart Item ID",
-                        "type": "integer",
-                        "format": "int64"
-                    },
-                    "cart_id": {
-                        "description": "ID of the parent cart",
-                        "type": "integer",
-                        "format": "int64"
-                    },
-                    "medicine_id": {
-                        "description": "ID of the medicine in the cart",
-                        "type": "integer",
-                        "format": "int64"
-                    },
-                    "quantity": {
-                        "description": "Quantity of the medicine",
-                        "type": "integer"
-                    },
-                    "created_at": {
-                        "description": "Timestamp of creation",
-                        "type": "string",
-                        "format": "date-time"
-                    },
-                    "updated_at": {
-                        "description": "Timestamp of last update",
-                        "type": "string",
-                        "format": "date-time"
-                    },
-                    "medicine": {
-                        "$ref": "#/components/schemas/Medicine"
-                    }
-                },
-                "type": "object",
-                "example": {
-                    "id": 1,
-                    "cart_id": 1,
-                    "medicine_id": 10,
-                    "quantity": 2,
-                    "created_at": "2023-01-01T12:00:00.000000Z",
-                    "updated_at": "2023-01-01T12:00:00.000000Z",
-                    "medicine": {
-                        "id": 10,
-                        "name": "Ibuprofen"
-                    }
+                    "success": "Operation successful."
                 }
             },
             "User": {
@@ -1999,6 +3629,21 @@
                     "updated_at": "2023-01-01T12:00:00.000000Z"
                 }
             },
+            "UserUsername": {
+                "title": "User with ID and Username",
+                "description": "A simple schema for a user with only ID and username.",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "username": {
+                        "type": "string",
+                        "example": "johndoe"
+                    }
+                },
+                "type": "object"
+            },
             "UserPagination": {
                 "title": "User Pagination",
                 "description": "Paginated list of users",
@@ -2020,53 +3665,1250 @@
                 },
                 "type": "object"
             },
-            "PortfolioLink": {
-                "title": "PortfolioLink",
-                "description": "Portfolio link model",
+            "Category": {
+                "title": "Category",
+                "description": "Category model",
                 "properties": {
                     "id": {
-                        "description": "ID of the portfolio link",
+                        "description": "Category ID",
                         "type": "integer",
                         "format": "int64"
                     },
-                    "provider_id": {
-                        "description": "ID of the user (provider) who owns this link",
-                        "type": "integer",
-                        "format": "int64"
-                    },
-                    "link": {
-                        "description": "The URL of the portfolio link",
-                        "type": "string",
-                        "format": "url"
+                    "name": {
+                        "description": "Category name",
+                        "type": "string"
                     },
                     "created_at": {
-                        "description": "Timestamp when the portfolio link was created",
+                        "description": "Timestamp of creation",
                         "type": "string",
-                        "format": "date-time",
-                        "nullable": true
+                        "format": "date-time"
                     },
                     "updated_at": {
-                        "description": "Timestamp when the portfolio link was last updated",
+                        "description": "Timestamp of last update",
                         "type": "string",
-                        "format": "date-time",
-                        "nullable": true
-                    }
-                },
-                "type": "object"
-            },
-            "ErrorResponse": {
-                "title": "Error Response",
-                "description": "Standard error response format for generic errors (e.g., 401, 403, 404, 500)",
-                "properties": {
-                    "errors": {
-                        "description": "Error message",
-                        "type": "string"
+                        "format": "date-time"
                     }
                 },
                 "type": "object",
                 "example": {
-                    "errors": "Something went wrong."
+                    "id": 1,
+                    "name": "Painkillers",
+                    "created_at": "2023-01-01T12:00:00.000000Z",
+                    "updated_at": "2023-01-01T12:00:00.000000Z"
                 }
+            },
+            "CategoryPagination": {
+                "title": "Category Pagination",
+                "description": "Paginated list of categories",
+                "properties": {
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Category"
+                        }
+                    },
+                    "links": {
+                        "description": "Pagination links",
+                        "type": "object"
+                    },
+                    "meta": {
+                        "description": "Pagination meta information",
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "Medicine": {
+                "title": "Medicine",
+                "description": "Medicine model",
+                "properties": {
+                    "id": {
+                        "description": "Medicine ID",
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "name": {
+                        "description": "Medicine name",
+                        "type": "string"
+                    },
+                    "description": {
+                        "description": "Medicine description",
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "price": {
+                        "description": "Medicine price",
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "dosage": {
+                        "description": "Medicine dosage",
+                        "type": "string"
+                    },
+                    "brand": {
+                        "description": "Medicine brand",
+                        "type": "string"
+                    },
+                    "image_url": {
+                        "description": "URL of the medicine image",
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "stock": {
+                        "description": "Current stock quantity",
+                        "type": "integer"
+                    },
+                    "created_at": {
+                        "description": "Timestamp of creation",
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "description": "Timestamp of last update",
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "categories": {
+                        "description": "Categories associated with the medicine",
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Category"
+                        }
+                    }
+                },
+                "type": "object",
+                "example": {
+                    "id": 1,
+                    "name": "Aspirin",
+                    "description": "Painkiller",
+                    "price": 5.99,
+                    "dosage": "500mg",
+                    "brand": "Bayer",
+                    "image_url": "http://example.com/images/aspirin.jpg",
+                    "stock": 100,
+                    "created_at": "2023-01-01T12:00:00.000000Z",
+                    "updated_at": "2023-01-01T12:00:00.000000Z",
+                    "categories": [
+                        {
+                            "id": 1,
+                            "name": "Painkillers"
+                        }
+                    ]
+                }
+            },
+            "MedicineName": {
+                "title": "Medicine Name and ID",
+                "description": "A simple schema for a medicine with only ID and name.",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 101
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Aspirin"
+                    }
+                },
+                "type": "object"
+            },
+            "MedicinePagination": {
+                "title": "Medicine Pagination",
+                "description": "Paginated list of medicines",
+                "properties": {
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Medicine"
+                        }
+                    },
+                    "links": {
+                        "description": "Pagination links",
+                        "type": "object"
+                    },
+                    "meta": {
+                        "description": "Pagination meta information",
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "CartItem": {
+                "title": "CartItem",
+                "description": "Cart item model",
+                "properties": {
+                    "id": {
+                        "description": "Cart item ID",
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "cart_id": {
+                        "description": "ID of the associated cart",
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "medicine_id": {
+                        "description": "ID of the associated medicine item",
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "quantity": {
+                        "description": "Quantity of the medicine item",
+                        "type": "integer"
+                    },
+                    "created_at": {
+                        "description": "Timestamp of creation",
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "description": "Timestamp of last update",
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object",
+                "example": {
+                    "id": 1,
+                    "cart_id": 1,
+                    "medicine_id": 101,
+                    "quantity": 2,
+                    "created_at": "2023-01-01T12:00:00.000000Z",
+                    "updated_at": "2023-01-01T12:00:00.000000Z"
+                }
+            },
+            "CartItemList": {
+                "title": "CartItemList",
+                "description": "List of cart items",
+                "properties": {
+                    "cartItems": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CartItem"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "UpdateCartItemRequest": {
+                "title": "UpdateCartItemRequest",
+                "description": "Request body for updating cart items",
+                "required": [
+                    "cart_id",
+                    "items"
+                ],
+                "properties": {
+                    "items": {
+                        "description": "List of new cart items",
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "medicine_id": {
+                                    "description": "ID of the medicine item",
+                                    "type": "integer"
+                                },
+                                "quantity": {
+                                    "description": "Quantity of the medicine item",
+                                    "type": "integer"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                },
+                "type": "object",
+                "example": {
+                    "items": [
+                        {
+                            "medicine_id": 1,
+                            "quantity": 2
+                        },
+                        {
+                            "medicine_id": 2,
+                            "quantity": 1
+                        }
+                    ]
+                }
+            },
+            "Order": {
+                "title": "Order",
+                "description": "Order model",
+                "properties": {
+                    "id": {
+                        "description": "Order ID",
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "user_id": {
+                        "description": "ID of the user who placed the order",
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "order_date": {
+                        "description": "Date and time of the order",
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "total_amount": {
+                        "description": "Total amount of the order",
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "order_status": {
+                        "description": "Current status of the order",
+                        "type": "string",
+                        "default": "pending",
+                        "enum": [
+                            "pending",
+                            "delivered",
+                            "canceled"
+                        ]
+                    },
+                    "payment_status": {
+                        "description": "Current status of the payment",
+                        "type": "string",
+                        "default": "pending",
+                        "enum": [
+                            "pending",
+                            "paid",
+                            "failed"
+                        ]
+                    },
+                    "subscribe_type": {
+                        "description": "Current status of the subscription",
+                        "type": "string",
+                        "default": "none",
+                        "enum": [
+                            "none",
+                            "weekly",
+                            "monthly"
+                        ]
+                    },
+                    "created_at": {
+                        "description": "Timestamp of order creation",
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "description": "Timestamp of last update",
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object",
+                "example": {
+                    "id": 1,
+                    "user_id": 10,
+                    "order_date": "2023-01-01T12:00:00.000000Z",
+                    "total_amount": 25.75,
+                    "order_status": "pending",
+                    "created_at": "2023-01-01T12:00:00.000000Z",
+                    "updated_at": "2023-01-01T12:00:00.000000Z"
+                }
+            },
+            "OrderItem": {
+                "title": "OrderItem",
+                "description": "Order item model",
+                "properties": {
+                    "id": {
+                        "description": "Order item ID",
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "order_id": {
+                        "description": "ID of the associated order",
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "medicine_id": {
+                        "description": "ID of the associated medicine item",
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "quantity": {
+                        "description": "Quantity of the medicine item",
+                        "type": "integer"
+                    },
+                    "created_at": {
+                        "description": "Timestamp of creation",
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "description": "Timestamp of last update",
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object",
+                "example": {
+                    "id": 1,
+                    "order_id": 1,
+                    "medicine_id": 101,
+                    "quantity": 2,
+                    "created_at": "2023-01-01T12:00:00.000000Z",
+                    "updated_at": "2023-01-01T12:00:00.000000Z"
+                }
+            },
+            "OrderWithItems": {
+                "title": "OrderWithItems",
+                "description": "Order model with associated order items",
+                "example": {
+                    "id": 1,
+                    "user_id": 10,
+                    "order_date": "2023-01-01T12:00:00.000000Z",
+                    "total_amount": 25.75,
+                    "order_status": "pending",
+                    "created_at": "2023-01-01T12:00:00.000000Z",
+                    "updated_at": "2023-01-01T12:00:00.000000Z",
+                    "order_items": [
+                        {
+                            "id": 1,
+                            "order_id": 1,
+                            "medicine_id": 101,
+                            "quantity": 2,
+                            "created_at": "2023-01-01T12:00:00.000000Z",
+                            "updated_at": "2023-01-01T12:00:00.000000Z"
+                        }
+                    ]
+                },
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/Order"
+                    },
+                    {
+                        "properties": {
+                            "order_items": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/OrderItem"
+                                }
+                            }
+                        },
+                        "type": "object"
+                    }
+                ]
+            },
+            "OrderItemWithMedicine": {
+                "title": "Order Item with Medicine Details",
+                "description": "Order item model with a nested medicine object containing only name and id.",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "order_id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "medicine_id": {
+                        "type": "integer",
+                        "example": 101
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "example": 2
+                    },
+                    "medicine": {
+                        "$ref": "#/components/schemas/MedicineName"
+                    }
+                },
+                "type": "object",
+                "example": {
+                    "id": 1,
+                    "order_id": 1,
+                    "medicine_id": 101,
+                    "quantity": 2,
+                    "medicine": {
+                        "id": 101,
+                        "name": "Aspirin"
+                    }
+                }
+            },
+            "OrderPagination": {
+                "title": "Order Pagination",
+                "description": "Paginated list of orders",
+                "properties": {
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Order"
+                        }
+                    },
+                    "links": {
+                        "description": "Pagination links",
+                        "type": "object"
+                    },
+                    "meta": {
+                        "description": "Pagination meta information",
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "Payment": {
+                "title": "Payment",
+                "description": "Payment model",
+                "properties": {
+                    "id": {
+                        "description": "Payment ID",
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "user_id": {
+                        "description": "ID of the user who made the payment",
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "order_id": {
+                        "description": "ID of the associated order",
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "payment_type": {
+                        "description": "Type of payment",
+                        "type": "string",
+                        "enum": [
+                            "cash",
+                            "card"
+                        ]
+                    },
+                    "payment_date": {
+                        "description": "Date and time of the payment",
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object",
+                "example": {
+                    "id": 1,
+                    "user_id": 1,
+                    "order_id": 10,
+                    "payment_type": "cash",
+                    "payment_date": "2023-01-01T13:00:00.000000Z"
+                }
+            },
+            "PaymentPagination": {
+                "title": "Payment Pagination",
+                "description": "Paginated list of payments",
+                "properties": {
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Payment"
+                        }
+                    },
+                    "links": {
+                        "description": "Pagination links",
+                        "type": "object"
+                    },
+                    "meta": {
+                        "description": "Pagination meta information",
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "RegisterPaymentRequest": {
+                "title": "RegisterPaymentRequest",
+                "description": "Request body for creating a new payment",
+                "required": [
+                    "order_id",
+                    "payment_type"
+                ],
+                "properties": {
+                    "order_id": {
+                        "description": "ID of the order to be paid",
+                        "type": "integer"
+                    },
+                    "payment_type": {
+                        "description": "Type of payment",
+                        "type": "string",
+                        "enum": [
+                            "cash",
+                            "card"
+                        ]
+                    }
+                },
+                "type": "object",
+                "example": {
+                    "order_id": 1,
+                    "payment_type": "cash"
+                }
+            },
+            "Prescription": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "user_id": {
+                        "type": "integer",
+                        "example": 101
+                    },
+                    "order_id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "image_url": {
+                        "type": "string",
+                        "format": "url",
+                        "example": "http://localhost:8000/storage/prescriptions/example.jpg"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "OrderWithItemsAndPrescriptions": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "user_id": {
+                        "type": "integer",
+                        "example": 101
+                    },
+                    "total_amount": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 55.5
+                    },
+                    "order_date": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2025-08-19"
+                    },
+                    "order_status": {
+                        "type": "string",
+                        "enum": [
+                            "pending",
+                            "delivered",
+                            "canceled"
+                        ],
+                        "example": "pending"
+                    },
+                    "payment_status": {
+                        "type": "string",
+                        "enum": [
+                            "pending",
+                            "paid",
+                            "failed"
+                        ],
+                        "example": "pending"
+                    },
+                    "subscribe_type": {
+                        "type": "string",
+                        "enum": [
+                            "none",
+                            "weekly",
+                            "monthly"
+                        ],
+                        "example": "none"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "user": {
+                        "$ref": "#/components/schemas/UserUsername"
+                    },
+                    "order_items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/OrderItemWithMedicine"
+                        }
+                    },
+                    "prescriptions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Prescription"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "OrderDeliveryResponse": {
+                "title": "Order Details for Delivery Response",
+                "description": "A simplified order model for use in delivery responses.",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 101
+                    },
+                    "user_id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "total_amount": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 50.75
+                    },
+                    "order_date": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2025-12-19"
+                    },
+                    "order_status": {
+                        "type": "string",
+                        "example": "pending"
+                    },
+                    "payment_status": {
+                        "type": "string",
+                        "example": "unpaid"
+                    },
+                    "subscribe_type": {
+                        "type": "string",
+                        "enum": [
+                            "none",
+                            "weekly",
+                            "monthly"
+                        ],
+                        "example": "none"
+                    }
+                },
+                "type": "object"
+            },
+            "DeliveryWithOrderResponse": {
+                "title": "Delivery with Order Details",
+                "description": "Delivery model with a nested order.",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "order_id": {
+                        "type": "integer",
+                        "example": 101
+                    },
+                    "track_num": {
+                        "type": "string",
+                        "example": "9876543210"
+                    },
+                    "est_del_date": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2025-12-25"
+                    },
+                    "act_del_date": {
+                        "type": "string",
+                        "format": "date",
+                        "example": null,
+                        "nullable": true
+                    },
+                    "delivery_status": {
+                        "type": "string",
+                        "enum": [
+                            "processing",
+                            "shipping",
+                            "delivered",
+                            "canceled"
+                        ],
+                        "example": "processing"
+                    },
+                    "delivery_type": {
+                        "type": "string",
+                        "enum": [
+                            "basic",
+                            "rapid",
+                            "emergency"
+                        ],
+                        "example": "basic"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-12-20T10:00:00Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-12-20T10:00:00Z"
+                    },
+                    "order": {
+                        "$ref": "#/components/schemas/OrderDeliveryResponse"
+                    }
+                },
+                "type": "object"
+            },
+            "PharmacistWithUser": {
+                "title": "Pharmacist with User Details",
+                "description": "Pharmacist model with a nested user.",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "user_id": {
+                        "type": "integer",
+                        "example": 101
+                    },
+                    "license_num": {
+                        "type": "integer",
+                        "example": 12345
+                    },
+                    "speciality": {
+                        "type": "string",
+                        "example": "Dermatology"
+                    },
+                    "bio": {
+                        "type": "string",
+                        "example": "A specialist in skin care."
+                    },
+                    "is_consultation": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "user": {
+                        "$ref": "#/components/schemas/User"
+                    }
+                },
+                "type": "object"
+            },
+            "RegisterPharmacistRequest": {
+                "title": "RegisterPharmacistRequest",
+                "properties": {
+                    "first_name": {
+                        "type": "string",
+                        "example": "Jane"
+                    },
+                    "last_name": {
+                        "type": "string",
+                        "example": "Doe"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "jane.doe@example.com"
+                    },
+                    "username": {
+                        "type": "string",
+                        "example": "janedoe"
+                    },
+                    "password": {
+                        "type": "string",
+                        "format": "password",
+                        "example": "Password123!"
+                    },
+                    "password_confirmation": {
+                        "type": "string",
+                        "format": "password",
+                        "example": "Password123!"
+                    },
+                    "address": {
+                        "type": "string",
+                        "example": "456 Oak Ave"
+                    },
+                    "license_num": {
+                        "type": "integer",
+                        "example": 12345
+                    },
+                    "speciality": {
+                        "type": "string",
+                        "example": "Clinical Pharmacy"
+                    },
+                    "bio": {
+                        "type": "string",
+                        "example": "Experienced pharmacist specializing in medication therapy."
+                    },
+                    "is_consultation": {
+                        "type": "boolean",
+                        "example": true
+                    }
+                },
+                "type": "object"
+            },
+            "UpdatePharmacistRequest": {
+                "title": "UpdatePharmacistRequest",
+                "properties": {
+                    "first_name": {
+                        "type": "string",
+                        "example": "Jane"
+                    },
+                    "last_name": {
+                        "type": "string",
+                        "example": "Doe"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "jane.doe@example.com"
+                    },
+                    "username": {
+                        "type": "string",
+                        "example": "janedoe"
+                    },
+                    "address": {
+                        "type": "string",
+                        "example": "456 Oak Ave"
+                    },
+                    "license_num": {
+                        "type": "integer",
+                        "example": 12345
+                    },
+                    "speciality": {
+                        "type": "string",
+                        "example": "Clinical Pharmacy"
+                    },
+                    "bio": {
+                        "type": "string",
+                        "example": "Experienced pharmacist specializing in medication therapy."
+                    },
+                    "is_consultation": {
+                        "type": "boolean",
+                        "example": true
+                    }
+                },
+                "type": "object"
+            },
+            "Notification": {
+                "title": "Notification",
+                "description": "Notification model",
+                "properties": {
+                    "id": {
+                        "description": "Notification ID",
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "user_id": {
+                        "description": "ID of the user the notification belongs to",
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "message": {
+                        "description": "The notification message",
+                        "type": "string"
+                    },
+                    "type": {
+                        "description": "The type of notification",
+                        "type": "string",
+                        "enum": [
+                            "info",
+                            "problem",
+                            "proposal",
+                            "project",
+                            "transaction",
+                            "review"
+                        ]
+                    },
+                    "link": {
+                        "description": "URL or link related to the notification",
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "is_read": {
+                        "description": "Indicates if the notification has been read",
+                        "type": "boolean"
+                    },
+                    "created_at": {
+                        "description": "Timestamp when the notification was created",
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "description": "Timestamp of last update",
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object",
+                "example": {
+                    "id": 1,
+                    "user_id": 1,
+                    "message": "Your proposal has been accepted.",
+                    "type": "proposal",
+                    "link": "/proposals/123",
+                    "is_read": false,
+                    "created_at": "2025-08-16T12:00:00.000000Z",
+                    "updated_at": "2025-08-16T12:00:00.000000Z"
+                }
+            },
+            "NotificationPagination": {
+                "title": "Notification Pagination",
+                "description": "Paginated list of notifications",
+                "properties": {
+                    "current_page": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Notification"
+                        }
+                    },
+                    "first_page_url": {
+                        "type": "string",
+                        "example": "http://localhost:8000/api/notifications?page=1"
+                    },
+                    "from": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "last_page": {
+                        "type": "integer",
+                        "example": 2
+                    },
+                    "last_page_url": {
+                        "type": "string",
+                        "example": "http://localhost:8000/api/notifications?page=2"
+                    },
+                    "links": {
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "url": {
+                                    "type": "string",
+                                    "example": "http://localhost:8000/api/notifications?page=1",
+                                    "nullable": true
+                                },
+                                "label": {
+                                    "type": "string",
+                                    "example": "&laquo; Previous"
+                                },
+                                "active": {
+                                    "type": "boolean",
+                                    "example": true
+                                }
+                            },
+                            "type": "object"
+                        }
+                    },
+                    "next_page_url": {
+                        "type": "string",
+                        "example": "http://localhost:8000/api/notifications?page=2",
+                        "nullable": true
+                    },
+                    "path": {
+                        "type": "string",
+                        "example": "http://localhost:8000/api/notifications"
+                    },
+                    "per_page": {
+                        "type": "integer",
+                        "example": 10
+                    },
+                    "prev_page_url": {
+                        "type": "string",
+                        "example": null,
+                        "nullable": true
+                    },
+                    "to": {
+                        "type": "integer",
+                        "example": 10
+                    },
+                    "total": {
+                        "type": "integer",
+                        "example": 14
+                    }
+                },
+                "type": "object"
+            },
+            "Consultation": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "user_id": {
+                        "type": "integer",
+                        "example": 101
+                    },
+                    "slot_id": {
+                        "type": "integer",
+                        "example": 202
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "pending"
+                    },
+                    "confirmed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "completed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "Slot": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 202
+                    },
+                    "pharmacist_id": {
+                        "type": "integer",
+                        "example": 101
+                    },
+                    "date": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2025-10-27"
+                    },
+                    "start_time": {
+                        "type": "integer",
+                        "example": 10
+                    },
+                    "start_period": {
+                        "type": "string",
+                        "enum": [
+                            "AM",
+                            "PM"
+                        ],
+                        "example": "AM"
+                    },
+                    "end_time": {
+                        "type": "integer",
+                        "example": 11
+                    },
+                    "end_period": {
+                        "type": "string",
+                        "enum": [
+                            "AM",
+                            "PM"
+                        ],
+                        "example": "AM"
+                    },
+                    "is_available": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "RegisterConsultationRequest": {
+                "required": [
+                    "pharmacist_id",
+                    "date",
+                    "start_time",
+                    "start_period"
+                ],
+                "properties": {
+                    "pharmacist_id": {
+                        "type": "integer",
+                        "example": 101
+                    },
+                    "date": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2025-11-20"
+                    },
+                    "start_time": {
+                        "description": "1-12 in 12-hour format",
+                        "type": "integer",
+                        "example": 10
+                    },
+                    "start_period": {
+                        "type": "string",
+                        "enum": [
+                            "AM",
+                            "PM"
+                        ],
+                        "example": "AM"
+                    }
+                },
+                "type": "object"
+            },
+            "UpdateConsultationRequest": {
+                "required": [
+                    "status"
+                ],
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "confirmed",
+                            "rejected",
+                            "completed"
+                        ],
+                        "example": "confirmed"
+                    }
+                },
+                "type": "object"
+            },
+            "ConsultationResource": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "user_id": {
+                        "type": "integer",
+                        "example": 101
+                    },
+                    "slot_id": {
+                        "type": "integer",
+                        "example": 202
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "pending"
+                    },
+                    "confirmed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "completed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "user": {
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 101
+                            },
+                            "username": {
+                                "type": "string",
+                                "example": "john_doe"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "slot": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/Slot"
+                            }
+                        ],
+                        "nullable": true
+                    }
+                },
+                "type": "object"
             }
         },
         "securitySchemes": {
@@ -2078,6 +4920,10 @@
     },
     "tags": [
         {
+            "name": "Users",
+            "description": "API Endpoints for User Management"
+        },
+        {
             "name": "Categories",
             "description": "API Endpoints for Category Management"
         },
@@ -2086,12 +4932,32 @@
             "description": "API Endpoints for Medicine Management"
         },
         {
-            "name": "Cart",
+            "name": "Carts",
             "description": "API Endpoints for Cart Management"
         },
         {
-            "name": "Users",
-            "description": "API Endpoints for User Management"
+            "name": "Orders",
+            "description": "API Endpoints for Order Management"
+        },
+        {
+            "name": "Payments",
+            "description": "API Endpoints for Payment Item Management"
+        },
+        {
+            "name": "Deliveries",
+            "description": "API Endpoints for Delivery Item Management"
+        },
+        {
+            "name": "Pharmacists",
+            "description": "API Endpoints for Pharmacist Item Management"
+        },
+        {
+            "name": "Notifications",
+            "description": "API Endpoints for Notifications"
+        },
+        {
+            "name": "Consultations",
+            "description": "API endpoints for managing consultations and slots."
         }
     ]
 }

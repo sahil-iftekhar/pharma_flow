@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Http\Requests\Medicine;
+namespace App\Http\Requests\Shop;
 
 use App\Http\Requests\BaseRequest;
 use Illuminate\Validation\Rule;
 
-class UpdateCategoryRequest extends BaseRequest
+class RegisterPaymentRequest extends BaseRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -23,7 +23,15 @@ class UpdateCategoryRequest extends BaseRequest
     public function rules(): array
     {
         return [
-            'name' => ['sometimes', 'required', 'string', Rule::unique('categories')->ignore($this->route('id'))],
+            'order_id' => ['required', 'exists:orders,id'],
+            'payment_type' => ['required', 'string', Rule::in(['cash', 'card'])],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'payment_type.in' => 'Payment type must be either "cash" or "card".',
         ];
     }
 }

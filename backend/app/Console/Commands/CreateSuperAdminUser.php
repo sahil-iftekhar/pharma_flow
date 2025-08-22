@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Symfony\Component\Console\Command\Command;
 use App\Models\User;
+use App\Models\Cart;
 
 class CreateSuperAdminUser extends NewCommand
 {
@@ -67,7 +68,11 @@ class CreateSuperAdminUser extends NewCommand
         // Create the User
         try {
             DB::transaction(function () use ($data) {
-                User::create($data);
+                $user = User::create($data);
+
+                Cart::create([
+                    'user_id' => $user->id
+                ]);
             });
 
             $this->info('Super Admin User created successfully!');

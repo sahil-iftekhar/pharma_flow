@@ -45,7 +45,7 @@ class DatabaseSeeder extends Seeder
             });
 
         Cart::factory(5)
-            ->has(CartItem::factory()->count(3), 'items')
+            ->has(CartItem::factory()->count(3), 'cartItems')
             ->create();
 
         Pharmacist::factory(5)

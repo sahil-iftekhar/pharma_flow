@@ -17,8 +17,11 @@ class SlotFactory extends Factory
      */
     public function definition(): array
     {
-        $start_time = fake()->time('H:i:s');
-        $end_time = date('H:i:s', strtotime($start_time) + 3600); // Add one hour
+        // Generate a random integer for the start time, from 9 to 17
+        $start_time = fake()->numberBetween(9, 17);
+
+        // Calculate the end time, which is always one hour after the start time
+        $end_time = $start_time + 1;
 
         return [
             'pharmacist_id' => Pharmacist::factory(),

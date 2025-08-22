@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use App\Models\Cart;
 use App\Models\User;
@@ -14,48 +15,6 @@ use App\Http\Requests\User\UpdateUserRequest;
 use App\Traits\AuthenticateUser;
 use App\OpenApi\Annotations as OA;
 
-/**
- * @OA\Schema(
- * schema="User",
- * title="User",
- * description="User model",
- * @OA\Property(property="id", type="integer", format="int64", description="User ID"),
- * @OA\Property(property="first_name", type="string", description="User's first name"),
- * @OA\Property(property="last_name", type="string", description="User's last name"),
- * @OA\Property(property="email", type="string", format="email", description="User's email address"),
- * @OA\Property(property="username", type="string", description="User's unique username"),
- * @OA\Property(property="address", type="string", nullable=true, description="User's address"),
- * @OA\Property(property="is_admin", type="boolean", description="Indicates if the user has admin privileges"),
- * @OA\Property(property="is_active", type="boolean", description="Indicates if the user account is active"),
- * @OA\Property(property="created_at", type="string", format="date-time", description="Timestamp of user creation"),
- * @OA\Property(property="updated_at", type="string", format="date-time", description="Timestamp of last update"),
- * example={
- * "id": 1, "first_name": "John", "last_name": "Doe", "email": "john.doe@example.com",
- * "username": "johndoe", "address": "123 Main St", "is_admin": false, "is_active": true,
- * "created_at": "2023-01-01T12:00:00.000000Z", "updated_at": "2023-01-01T12:00:00.000000Z"
- * }
- * )
- *
- * @OA\Schema(
- * schema="UserPagination",
- * title="User Pagination",
- * description="Paginated list of users",
- * @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/User")),
- * @OA\Property(property="links", type="object", description="Pagination links"),
- * @OA\Property(property="meta", type="object", description="Pagination meta information")
- * )
- *
- * @OA\Schema(
- * schema="PortfolioLink",
- * title="PortfolioLink",
- * description="Portfolio link model",
- * @OA\Property(property="id", type="integer", format="int64", description="ID of the portfolio link"),
- * @OA\Property(property="provider_id", type="integer", format="int64", description="ID of the user (provider) who owns this link"),
- * @OA\Property(property="link", type="string", format="url", description="The URL of the portfolio link"),
- * @OA\Property(property="created_at", type="string", format="date-time", nullable=true, description="Timestamp when the portfolio link was created"),
- * @OA\Property(property="updated_at", type="string", format="date-time", nullable=true, description="Timestamp when the portfolio link was last updated")
- * )
- */
 class UserController extends Controller
 {
     use AuthenticateUser;
@@ -135,7 +94,7 @@ class UserController extends Controller
      * operationId="getUserByIdOrSlug",
      * tags={"Users"},
      * summary="Get user details by ID or slug",
-     * description="Retrieves the details of a specific user by their ID or slug. A user can view their own profile, or an admin can view any user's profile. Includes portfolio links if the user is a 'provider'.",
+     * description="Retrieves the details of a specific user by their ID or slug.",
      * security={{"sanctum": {}}},
      * @OA\Parameter(
      * name="user",
@@ -150,15 +109,6 @@ class UserController extends Controller
      * @OA\JsonContent(
      * allOf={
      * @OA\Schema(ref="#/components/schemas/User"),
-     * @OA\Schema(
-     * @OA\Property(
-     * property="portfolio_links",
-     * type="array",
-     * @OA\Items(ref="#/components/schemas/PortfolioLink"),
-     * nullable=true,
-     * description="List of portfolio links for 'provider' users."
-     * )
-     * )
      * }
      * )
      * ),
@@ -201,16 +151,6 @@ class UserController extends Controller
                 return response()->json(['error' => 'User not found'], 404);
             }
 
-            if (Auth::user()->id !== $foundUser->id && !Auth::user()->isAdmin()) {
-                return response()->json([
-                    "errors" => "You are not authorized to view this user."
-                ], 403);
-            }
-
-            if ($foundUser->role === 'provider') {
-                $foundUser->load('portfolioLinks');
-            }
-
             return response()->json($foundUser, 200);
         } catch (\Exception $e) {
             Log::error($e);
@@ -225,8 +165,8 @@ class UserController extends Controller
      * path="/api/users",
      * operationId="createUser",
      * tags={"Users"},
-     * summary="Create a new company user",
-     * description="Registers a new user with the 'company' role. Sensitive fields like 'is_admin' and 'is_active' 
+     * summary="Create a new user",
+     * description="Registers a new user. Sensitive fields like 'is_admin' and 'is_active' 
      * cannot be set by the client for this endpoint.",
      * @OA\RequestBody(
      * required=true,
@@ -294,112 +234,13 @@ class UserController extends Controller
         $validated = $request->validated();
 
         try {
-            $user = User::create($validated);
-            // Create a cart for the new user
-            Cart::create(['user_id' => $user->id]);
+            DB::transaction(function () use ($validated) {
+                $user = User::create($validated);
 
-            return response()->json([
-                "success" => "User created successfully. Please verify your email to activate your account.",
-            ], 201);
-        } catch (\Exception $e) {
-            Log::error($e);
-            return response()->json([
-                "errors" => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * @OA\Post(
-     * path="/api/users/admin",
-     * operationId="createAdminUser",
-     * tags={"Users"},
-     * summary="Create a new admin user",
-     * description="Registers a new user with the 'admin' role and sets 'is_admin' to true. Requires super super admin privileges for the authenticated user. 
-     * Sensitive fields like 'is_active' and 'role' ('admin') cannot be set by the client for this endpoint.",
-     * security={{"sanctum": {}}},
-     * @OA\RequestBody(
-     * required=true,
-     * description="Admin user registration data. Can be JSON or Multipart Form Data.",
-     * @OA\MediaType(
-     * mediaType="application/json",
-     * @OA\Schema(
-     * required={"email", "username", "password", "password_confirmation", "is_admin", "role"},
-     * @OA\Property(property="first_name", type="string", nullable=true, example="Admin"),
-     * @OA\Property(property="last_name", type="string", nullable=true, example="User"),
-     * @OA\Property(property="email", type="string", format="email", example="admin@example.com"),
-     * @OA\Property(property="username", type="string", example="adminuser"),
-     * @OA\Property(property="password", type="string", format="password", example="AdminPass123!"),
-     * @OA\Property(property="password_confirmation", type="string", format="password", example="AdminPass123!"),
-     * @OA\Property(property="address", type="string", nullable=true, example="100 Admin Rd"),
-     * )
-     * ),
-     * ),
-     * @OA\Response(
-     * response=201,
-     * description="User created successfully",
-     * @OA\JsonContent(
-     * @OA\Property(property="success", type="string", example="Operation completed successfully.")
-     * )
-     * ),
-     * @OA\Response(
-     * response=401,
-     * description="Unauthenticated",
-     * @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
-     * ),
-     * @OA\Response(
-     * response=403,
-     * description="Forbidden: Unauthorized key (e.g., is_active, incorrect role) provided, or authenticated user lacks privileges to create an an admin.",
-     * @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
-     * ),
-     * @OA\Response(
-     * response=422,
-     * description="Validation Error: Invalid input for allowed fields.",
-     * @OA\JsonContent(
-     * @OA\Property(property="message", type="string", example="The given data was invalid."),
-     * @OA\Property(property="errors", type="object",
-     * @OA\AdditionalProperties(
-     * type="array",
-     * @OA\Items(type="string", example="The field is required.")
-     * )
-     * ),
-     * example={
-     * "message": "The given data was invalid.",
-     * "errors": {
-     * "email": {"The email is already in use."},
-     * "password": {"The password confirmation does not match."}
-     * }
-     * }
-     * )
-     * ),
-     * @OA\Response(
-     * response=500,
-     * description="Internal Server Error",
-     * @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
-     * )
-     * )
-     */
-    public function createAdminUser(RegisterUserRequest $request): JsonResponse
-    {
-        $checkAuthUser = $this->ensureAuthenticated();
-
-        if ($checkAuthUser) {
-            return $checkAuthUser;
-        }
-
-        if (!Auth::user()->is_super_admin) {
-            return response()->json([
-                "errors" => "You are not authorized to create an admin user."
-            ], 403);
-        }
-
-        $validated = $request->validated();
-        $validated['is_admin'] = true;
-
-        try {
-            $user = User::create($validated);
-            // Create a cart for the new admin user
-            Cart::create(['user_id' => $user->id]);
+                Cart::create([
+                    'user_id' => $user->id,
+                ]);
+            });
 
             return response()->json([
                 "success" => "User created successfully.",

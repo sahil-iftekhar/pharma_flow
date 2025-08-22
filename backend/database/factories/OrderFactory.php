@@ -21,7 +21,7 @@ class OrderFactory extends Factory
             'user_id' => User::factory(),
             'total_amount' => fake()->randomFloat(2, 10, 500),
             'order_date' => fake()->date(),
-            'order_status' => fake()->randomElement(['pending', 'delivered', 'cancelled']),
+            'order_status' => fake()->randomElement(['pending', 'delivered', 'canceled']),
             'payment_status' => fake()->randomElement(['pending', 'paid', 'failed']),
             'subscribe_type' => fake()->randomElement(['none', 'weekly', 'monthly']),
         ];

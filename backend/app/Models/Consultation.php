@@ -35,4 +35,9 @@ class Consultation extends Model
     {
         return $this->belongsTo(Slot::class);
     }
+
+    public function userWithUsername()
+    {
+        return $this->belongsTo(User::class)->select('id', 'username');
+    }
 }

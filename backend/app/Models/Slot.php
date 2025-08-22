@@ -31,8 +31,8 @@ class Slot extends Model
      */
     protected $casts = [
         'date' => 'date',
-        'start_time' => 'datetime',
-        'end_time' => 'datetime',
+        'start_time' => 'integer',
+        'end_time' => 'integer',
         'is_available' => 'boolean',
     ];
 

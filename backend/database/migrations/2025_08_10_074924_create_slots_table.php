@@ -15,8 +15,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('pharmacist_id')->constrained('pharmacists')->onDelete('cascade');
             $table->date('date');
-            $table->time('start_time');
-            $table->time('end_time');
+            $table->integer('start_time');
+            $table->integer('end_time');  
             $table->boolean('is_available')->default(true);
             $table->timestamps();
         });

@@ -17,7 +17,7 @@ class DeliveryFactory extends Factory
      */
     public function definition(): array
     {
-        $deliveryStatus = fake()->randomElement(['processing', 'shipping', 'delivered', 'failed']);
+        $deliveryStatus = fake()->randomElement(['processing', 'delivered', 'failed']);
         $estDelDate = fake()->date();
         $actDelDate = null;
         if ($deliveryStatus === 'delivered') {

@@ -4,29 +4,12 @@ namespace App\Http\Controllers\Medicine;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Medicine\RegisterCategoryRequest;
-use App\Http\Requests\Medicine\UpdateCategoryRequest;
 use App\Models\Category;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use OpenApi\Annotations as OA;
 
-/**
- * @OA\Tag(
- * name="Categories",
- * description="API Endpoints for Category Management"
- * )
- *
- * @OA\Schema(
- * schema="Category",
- * title="Category",
- * description="Category model",
- * @OA\Property(property="id", type="integer", format="int64", description="Category ID"),
- * @OA\Property(property="name", type="string", description="Category name"),
- * @OA\Property(property="created_at", type="string", format="date-time", description="Timestamp of creation"),
- * @OA\Property(property="updated_at", type="string", format="date-time", description="Timestamp of last update"),
- * example={"id": 1, "name": "Painkillers", "created_at": "2023-01-01T12:00:00.000000Z", "updated_at": "2023-01-01T12:00:00.000000Z"}
- * )
- */
 class CategoryController extends Controller
 {
     public function __construct()
@@ -39,75 +22,49 @@ class CategoryController extends Controller
      * path="/api/categories",
      * operationId="getCategoriesList",
      * tags={"Categories"},
-     * summary="Get all categories",
-     * description="Retrieves a list of all medicine categories.",
+     * summary="Get a paginated list of all categories",
+     * description="Retrieves a paginated list of all categories. Accessible by any authenticated user.",
      * security={{"sanctum": {}}},
+     * @OA\Parameter(
+     * name="page",
+     * in="query",
+     * description="Page number for pagination",
+     * required=false,
+     * @OA\Schema(type="integer", default=1)
+     * ),
+     * @OA\Parameter(
+     * name="per_page",
+     * in="query",
+     * description="Number of items per page",
+     * required=false,
+     * @OA\Schema(type="integer", default=10)
+     * ),
      * @OA\Response(
      * response=200,
      * description="Successful operation",
-     * @OA\JsonContent(
-     * type="array",
-     * @OA\Items(ref="#/components/schemas/Category")
-     * )
+     * @OA\JsonContent(ref="#/components/schemas/CategoryPagination")
      * ),
      * @OA\Response(
      * response=401,
      * description="Unauthenticated",
+     * @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
+     * ),
+     * @OA\Response(
+     * response=500,
+     * description="Internal Server Error",
      * @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
      * )
      * )
      */
     public function index(): JsonResponse
     {
-        $categories = Category::all();
-        return response()->json($categories);
-    }
-
-    /**
-     * @OA\Post(
-     * path="/api/categories",
-     * operationId="createCategory",
-     * tags={"Categories"},
-     * summary="Create a new category",
-     * description="Creates a new category. Requires admin privileges.",
-     * security={{"sanctum": {}}},
-     * @OA\RequestBody(
-     * required=true,
-     * @OA\JsonContent(
-     * required={"name"},
-     * @OA\Property(property="name", type="string", example="Antibiotics")
-     * )
-     * ),
-     * @OA\Response(
-     * response=201,
-     * description="Category created successfully",
-     * @OA\JsonContent(ref="#/components/schemas/Category")
-     * ),
-     * @OA\Response(
-     * response=401,
-     * description="Unauthenticated",
-     * @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
-     * ),
-     * @OA\Response(
-     * response=403,
-     * description="Forbidden: User lacks admin privileges.",
-     * @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
-     * ),
-     * @OA\Response(
-     * response=422,
-     * description="Validation Error",
-     * @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
-     * )
-     * )
-     */
-    public function store(RegisterCategoryRequest $request): JsonResponse
-    {
         try {
-            $category = Category::create($request->validated());
-            return response()->json($category, 201);
+            $categories = Category::paginate(10);
+            return response()->json($categories, 200);
         } catch (\Exception $e) {
+            Log::error($e);
             return response()->json([
-                'errors' => 'Failed to create category.'
+                "errors" => $e->getMessage()
             ], 500);
         }
     }
@@ -117,65 +74,19 @@ class CategoryController extends Controller
      * path="/api/categories/{id}",
      * operationId="getCategoryById",
      * tags={"Categories"},
-     * summary="Get category by ID",
-     * description="Retrieves a specific category by its ID.",
+     * summary="Get category details by ID",
+     * description="Retrieves the details of a specific category by its ID. Accessible by any authenticated user.",
      * security={{"sanctum": {}}},
      * @OA\Parameter(
      * name="id",
      * in="path",
+     * description="ID of the category to retrieve",
      * required=true,
-     * @OA\Schema(type="integer"),
-     * description="ID of the category"
+     * @OA\Schema(type="integer")
      * ),
      * @OA\Response(
      * response=200,
      * description="Successful operation",
-     * @OA\JsonContent(ref="#/components/schemas/Category")
-     * ),
-     * @OA\Response(
-     * response=404,
-     * description="Category not found",
-     * @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
-     * )
-     * )
-     */
-    public function show(string $id): JsonResponse
-    {
-        $category = Category::find($id);
-
-        if (!$category) {
-            return response()->json([
-                'errors' => 'Category not found.'
-            ], 404);
-        }
-        
-        return response()->json($category);
-    }
-
-    /**
-     * @OA\Put(
-     * path="/api/categories/{id}",
-     * operationId="updateCategory",
-     * tags={"Categories"},
-     * summary="Update a category",
-     * description="Updates an existing category. Requires admin privileges.",
-     * security={{"sanctum": {}}},
-     * @OA\Parameter(
-     * name="id",
-     * in="path",
-     * required=true,
-     * @OA\Schema(type="integer"),
-     * description="ID of the category to update"
-     * ),
-     * @OA\RequestBody(
-     * required=true,
-     * @OA\JsonContent(
-     * @OA\Property(property="name", type="string", example="Analgesics")
-     * )
-     * ),
-     * @OA\Response(
-     * response=200,
-     * description="Category updated successfully",
      * @OA\JsonContent(ref="#/components/schemas/Category")
      * ),
      * @OA\Response(
@@ -184,38 +95,111 @@ class CategoryController extends Controller
      * @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
      * ),
      * @OA\Response(
-     * response=403,
-     * description="Forbidden: User lacks admin privileges.",
-     * @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
-     * ),
-     * @OA\Response(
      * response=404,
-     * description="Category not found",
+     * description="Not Found: Category not found.",
      * @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
      * ),
      * @OA\Response(
-     * response=422,
-     * description="Validation Error",
+     * response=500,
+     * description="Internal Server Error",
      * @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
      * )
      * )
      */
-    public function update(UpdateCategoryRequest $request, string $id): JsonResponse
+    public function show(string $category)
     {
-        $category = Category::find($id);
-
-        if (!$category) {
-            return response()->json([
-                'errors' => 'Category not found.'
-            ], 404);
-        }
-        
         try {
-            $category->update($request->validated());
-            return response()->json($category);
+            $foundCategory = Category::find($category);
+
+            if (!$foundCategory) {
+                return response()->json(['errors' => 'Category not found'], 404);
+            }
+
+            return response()->json($foundCategory, 200);
         } catch (\Exception $e) {
+            Log::error($e);
             return response()->json([
-                'errors' => 'Failed to update category.'
+                "errors" => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * @OA\Post(
+     * path="/api/categories",
+     * operationId="createCategory",
+     * tags={"Categories"},
+     * summary="Create a new category",
+     * description="Creates a new category. Requires super admin privileges.",
+     * security={{"sanctum": {}}},
+     * @OA\RequestBody(
+     * required=true,
+     * description="Category creation data.",
+     * @OA\MediaType(
+     * mediaType="application/json",
+     * @OA\Schema(
+     * required={"name"},
+     * @OA\Property(property="name", type="string", example="Painkillers")
+     * )
+     * )
+     * ),
+     * @OA\Response(
+     * response=201,
+     * description="Category created successfully",
+     * @OA\JsonContent(
+     * @OA\Property(property="success", type="string", example="Category created successfully.")
+     * )
+     * ),
+     * @OA\Response(
+     * response=401,
+     * description="Unauthenticated",
+     * @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
+     * ),
+     * @OA\Response(
+     * response=403,
+     * description="Forbidden: You are not authorized to create a category.",
+     * @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
+     * ),
+     * @OA\Response(
+     * response=422,
+     * description="Validation Error: Invalid input for allowed fields.",
+     * @OA\JsonContent(
+     * @OA\Property(property="message", type="string", example="The given data was invalid."),
+     * @OA\Property(property="errors", type="object",
+     * @OA\AdditionalProperties(
+     * type="array",
+     * @OA\Items(type="string", example="The name has already been taken.")
+     * )
+     * )
+     * )
+     * ),
+     * @OA\Response(
+     * response=500,
+     * description="Internal Server Error",
+     * @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
+     * )
+     * )
+     */
+    public function create(RegisterCategoryRequest $request)
+    {
+        if (!Auth::user()->isSuperAdmin()) {
+            return response()->json([
+                "errors" => "You are not authorized to create category."
+            ], 403);
+        }
+
+        $validated = $request->validated();
+
+        try {
+            Category::create($validated);
+
+            return response()->json([
+                "success" => "Category created successfully.",
+            ], 201);
+        } catch (\Exception $e) {
+            Log::error($e);
+            return response()->json([
+                "errors" => $e->getMessage()
             ], 500);
         }
     }
@@ -226,21 +210,18 @@ class CategoryController extends Controller
      * operationId="deleteCategory",
      * tags={"Categories"},
      * summary="Delete a category",
-     * description="Deletes a category by ID. Requires admin privileges.",
+     * description="Deletes a category by its ID. Requires super admin privileges.",
      * security={{"sanctum": {}}},
      * @OA\Parameter(
      * name="id",
      * in="path",
+     * description="ID of the category to delete",
      * required=true,
-     * @OA\Schema(type="integer"),
-     * description="ID of the category to delete"
+     * @OA\Schema(type="integer")
      * ),
      * @OA\Response(
-     * response=200,
-     * description="Category deleted successfully",
-     * @OA\JsonContent(
-     * @OA\Property(property="success", type="string", example="Category deleted successfully.")
-     * )
+     * response=204,
+     * description="No Content: Category deleted successfully."
      * ),
      * @OA\Response(
      * response=401,
@@ -249,29 +230,46 @@ class CategoryController extends Controller
      * ),
      * @OA\Response(
      * response=403,
-     * description="Forbidden: User lacks admin privileges.",
+     * description="Forbidden: You are not authorized to delete this category.",
      * @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
      * ),
      * @OA\Response(
      * response=404,
-     * description="Category not found",
+     * description="Not Found: Category not found.",
+     * @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
+     * ),
+     * @OA\Response(
+     * response=500,
+     * description="Internal Server Error",
      * @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
      * )
      * )
      */
-    public function destroy(string $id): JsonResponse
+    public function destroy(string $category)
     {
-        $category = Category::find($id);
+        try {
+            $foundCategory = Category::find($category);
 
-        if (!$category) {
+            if (!$foundCategory) {
+                return response()->json([
+                    'error' => 'Category not found'
+                ], 404);
+            }
+
+            if (!Auth::user()->isSuperAdmin()) {
+                return response()->json([
+                    'errors' => 'You are not authorized to delete category.'
+                ], 403);
+            }
+
+            $foundCategory->delete();
+
+            return response()->json(null, 204);
+        } catch (\Exception $e) {
+            Log::error($e);
             return response()->json([
-                'errors' => 'Category not found.'
-            ], 404);
+                "error" => $e->getMessage()
+            ], 500);
         }
-
-        $category->delete();
-        return response()->json([
-            'success' => 'Category deleted successfully.'
-        ], 200);
     }
 }

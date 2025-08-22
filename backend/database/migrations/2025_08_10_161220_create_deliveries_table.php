@@ -17,7 +17,7 @@ return new class extends Migration
             $table->bigInteger('track_num');
             $table->date('est_del_date')->nullable();
             $table->date('act_del_date')->nullable();
-            $table->enum('delivery_status', ['processing', 'shipping', 'delivered', 'failed'])->default('processing');
+            $table->enum('delivery_status', ['processing', 'delivered', 'failed'])->default('processing');
             $table->enum('delivery_type', ['basic', 'rapid', 'emergency'])->default('basic');
         });
     }

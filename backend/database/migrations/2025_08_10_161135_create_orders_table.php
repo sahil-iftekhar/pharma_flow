@@ -19,7 +19,7 @@ return new class extends Migration
             $table->enum('order_status', [
                 'pending', // renew order based on subscribe type
                 'delivered', // new order after this one delivered based on subscribe type
-                'cancelled' // if so we will not renew order
+                'canceled' // if so we will not renew order
             ])->default('pending');
             $table->enum('payment_status', ['pending', 'paid', 'failed'])->default('pending');
             $table->enum('subscribe_type', ['none', 'weekly', 'monthly'])->default('none');
