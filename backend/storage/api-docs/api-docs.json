@@ -4828,14 +4828,6 @@
                         "description": "1-12 in 12-hour format",
                         "type": "integer",
                         "example": 10
-                    },
-                    "start_period": {
-                        "type": "string",
-                        "enum": [
-                            "AM",
-                            "PM"
-                        ],
-                        "example": "AM"
                     }
                 },
                 "type": "object"

@@ -148,8 +148,8 @@ class PharmacistController extends Controller
             $validated = $request->validated();
 
             $userData = [
-                'first_name' => $validated['first_name'],
-                'last_name' => $validated['last_name'],
+                'first_name' => isset($validated['first_name']) ? $validated['first_name'] : null,
+                'last_name' => isset($validated['last_name']) ? $validated['last_name'] : null,
                 'email' => $validated['email'],
                 'username' => $validated['username'],
                 'password' => $validated['password'],

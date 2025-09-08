@@ -592,7 +592,6 @@ use OpenApi\Annotations as OA;
  * @OA\Property(property="pharmacist_id", type="integer", example=101),
  * @OA\Property(property="date", type="string", format="date", example="2025-11-20"),
  * @OA\Property(property="start_time", type="integer", example=10, description="1-12 in 12-hour format"),
- * @OA\Property(property="start_period", type="string", enum={"AM", "PM"}, example="AM")
  * )
  *
  * @OA\Schema(

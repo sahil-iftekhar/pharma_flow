@@ -85,9 +85,16 @@ class OrderController extends Controller
     public function index()
     {
         try {
-            $orders = Auth::user()->isAdmin() ? 
-                        Order::paginate(10) : 
-                        Order::where('user_id', Auth::user()->id)->paginate(10);
+            $orders = Auth::user()->isAdmin() ?
+                        Order::with('delivery')
+                             ->orderByDesc('order_date')
+                             ->orderByDesc('id')
+                             ->paginate(10) :
+                        Order::with('delivery')
+                             ->where('user_id', Auth::user()->id)
+                             ->orderByDesc('order_date')
+                             ->orderByDesc('id')
+                             ->paginate(10);
 
             return response()->json($orders, 200);
         } catch (\Exception $e) {
@@ -140,6 +147,7 @@ class OrderController extends Controller
      */
     public function show(string $order)
     {
+        // update
         try {
             $order = Order::with([
                 'orderItems.medicine' => function ($query) {
@@ -148,7 +156,8 @@ class OrderController extends Controller
                 'user' => function ($query) {
                     $query->select('id', 'username');
                 },
-                'prescriptions'
+                'prescriptions',
+                'delivery'
             ])->find($order);
 
             if (!$order) {
@@ -273,6 +282,12 @@ class OrderController extends Controller
                 $totalAmount = 0;
                 foreach ($cart->cartItems as $cartItem) {
                     if ($cartItem->medicine) {
+                        $medicine = $cartItem->medicine;
+
+                        if ($medicine->stock < $cartItem->quantity) {
+                            throw new \Exception('Insufficient stock for medicine ' . $medicine->name);
+                        }
+
                         $totalAmount += $cartItem->quantity * $cartItem->medicine->price;
                     }
                 }
@@ -299,6 +314,10 @@ class OrderController extends Controller
                         'medicine_id' => $cartItem->medicine_id,
                         'quantity' => $cartItem->quantity,
                     ]);
+
+                    $medicine = $cartItem->medicine;
+                    $medicine->stock -= $cartItem->quantity;
+                    $medicine->save();
                 }
 
                 $this->prescriptionsHandler($request, $order->id);
@@ -318,9 +337,11 @@ class OrderController extends Controller
                     "Your order ". $order->id ." has been placed and payment is pending"
                 );
             });
+            $order = Order::where('user_id', Auth::user()->id)->orderByDesc('order_date')->orderByDesc('id')->first();
 
             return response()->json([
-                'message' => 'Order created successfully.'
+                'order_id' => $order->id,
+                'success' => 'Order created successfully.'
             ], 201);
         } catch (\Exception $e) {
             Log::error($e);
@@ -334,6 +355,12 @@ class OrderController extends Controller
             if ($e->getMessage() === 'Cart is empty.') {
                 return response()->json([
                     "errors" => "Cart is empty."
+                ], 400);
+            }
+
+            if (str_contains($e->getMessage(), 'Insufficient stock for medicine')) {
+                return response()->json([
+                    "errors" => $e->getMessage()
                 ], 400);
             }
 
@@ -400,7 +427,7 @@ class OrderController extends Controller
     {
         $validated = $request->validated();
         try {
-            $order = Order::find($order);
+            $order = Order::with('orderItems.medicine')->find($order);
 
             if (!$order) {
                 return response()->json([
@@ -408,10 +435,22 @@ class OrderController extends Controller
                 ], 404);
             }
 
+            if ($order->order_status === 'delivered') {
+                return response()->json([
+                    "errors" => "Order already delivered."
+                ], 400);
+            }
+
+            if ($order->order_status === 'canceled') {
+                return response()->json([
+                    "errors" => "Order already canceled."
+                ], 400);
+            }
+
             if (
                 (!Auth::user()->isAdmin() &&
-                ($order->user_id !== Auth::user()->id ||
-                $validated['order_status'] !== 'canceled')) ||
+                $order->user_id !== Auth::user()->id &&
+                $validated['order_status'] !== 'canceled') ||
                 (Auth::user()->isAdmin() &&
                 $order->user_id !== Auth::user()->id &&
                 ($validated['order_status'] === 'canceled' ||
@@ -422,50 +461,62 @@ class OrderController extends Controller
                 ], 403);
             }
 
-            if (
-                $validated['order_status'] === 'delivered' ||
-                $validated['order_status'] === 'canceled'
-            ) {
-                if ($validated['order_status'] === 'delivered') {
-                    if ($order->order_status === 'delivered') {
-                        return response()->json([
-                            "errors" => "Order already delivered."
-                        ], 400);
+            $order_status_key = null;
+            if (isset($validated['order_status'])) {
+                $order_status_key = true;
+            }
+
+            if ($order_status_key && $validated['order_status'] === 'canceled') {
+                foreach ($order->orderItems as $orderItem) {
+                    if ($orderItem->medicine) {
+                        $medicine = $orderItem->medicine;
+                        $medicine->stock += $orderItem->quantity;
+                        $medicine->save();
                     }
-                    
-                    $payment = Payment::where('order_id', $order->id)->first();
-
-                    if (!$payment) {
-                        return response()->json([
-                            "errors" => "Payment not found."
-                        ], 404);
-                    }
-
-                    $order->payment_status = 'paid';
-                    $order->delivery()->update([
-                        'delivery_status' => 'delivered',
-                        'act_del_date' => now(),
-                    ]);
-
-                } else {
-                    $order->payment_status = 'failed';
-                    $order->delivery()->update([
-                        'delivery_status' => 'failed',
-                        'est_del_date' => null,
-                        'act_del_date' => null,
-                    ]);
                 }
+                $order->payment_status = 'failed';
+                $order->delivery()->update([
+                    'delivery_status' => 'failed',
+                    'est_del_date' => null,
+                    'act_del_date' => null,
+                ]);
+            }
+
+            if ($order_status_key && $validated['order_status'] === 'delivered') {
+                $payment = Payment::where('order_id', $order->id)->first();
+
+                if (!$payment) {
+                    return response()->json([
+                        "errors" => "Payment not found."
+                    ], 404);
+                }
+
+                $order->payment_status = 'paid';
+                $order->delivery()->update([
+                    'delivery_status' => 'delivered',
+                    'act_del_date' => now(),
+                ]);
             }
 
             if (isset($validated['subscribe_type'])) {
                 $order->subscribe_type = $validated['subscribe_type'];
             }
 
-            $order->order_status = $validated['order_status'];
+            if ($order_status_key) {
+                $order->order_status = $validated['order_status'];
+            }
+            
             $order->save();
-
-            if ($validated['order_status'] === 'delivered' && in_array($order->subscribe_type, ['weekly', 'monthly'])) {
+            
+            if ($order_status_key && $validated['order_status'] === 'delivered' && in_array($order->subscribe_type, ['weekly', 'monthly'])) {
                 DB::transaction(function () use ($order) {
+                    foreach ($order->orderItems as $orderItem) {
+                        $medicine = $orderItem->medicine;
+                        if ($medicine->stock < $orderItem->quantity) {
+                            throw new \Exception('Insufficient stock for medicine ' . $medicine->name . ' to renew subscription.');
+                        }
+                    }
+
                     $date = ($order->subscribe_type === 'weekly') ? now()->addWeek() : now()->addMonth();
 
                     $newOrder = $order->replicate([
@@ -521,6 +572,13 @@ class OrderController extends Controller
             ], 200);
         } catch (\Exception $e) {
             Log::error($e);
+
+            if (str_contains($e->getMessage(), 'Insufficient stock for medicine')) {
+                return response()->json([
+                    "errors" => $e->getMessage()
+                ], 400);
+            }
+
             return response()->json([
                 "errors" => $e->getMessage()
             ], 500);

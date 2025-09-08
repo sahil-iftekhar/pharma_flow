@@ -59,7 +59,7 @@ class CategoryController extends Controller
     public function index(): JsonResponse
     {
         try {
-            $categories = Category::paginate(10);
+            $categories = Category::all();
             return response()->json($categories, 200);
         } catch (\Exception $e) {
             Log::error($e);

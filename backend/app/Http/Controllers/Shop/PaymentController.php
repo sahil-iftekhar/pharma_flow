@@ -209,6 +209,8 @@ class PaymentController extends Controller
                 "message" => "Your payment for order #{$order->id} has been successful."
             ]);
 
+            $order->update(['payment_status' => 'paid']);
+
             return response()->json([
                 "success" => "Payment successful."
             ], 201);
