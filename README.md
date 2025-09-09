@@ -1,12 +1,10 @@
 # pharma_flow
-This is a pharmacy website where an user can have easy pharmacy experience. An user can order in different ways with different types of subscriptions. Also an user can have information of different consultants around town who are available for consultations
-
+This is a pharmacy website where an user can have easy pharmacy experience. An user can order in different ways with different types of subscriptions. Also an user can have information of different consultants around town who are available for consultations.
 Tech Stack:
-Frontend: Nextjs
-Backend: Laravel
-Database: Postgres
-Architecture: Model-View-Controller (MVC)
-
+1. Backend: Laravel
+2. Frontend: Next js
+3. Database: Postgres
+4. Architecture: MVC
 Features:
 1. Search Functionality
 2. Cart System
